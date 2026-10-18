@@ -2,19 +2,28 @@
 Entrena el modelo de la fase 1 desde la línea de comandos.
 
 Flujo: leer datos -> validar columnas -> inducir faltantes (declarados) -> descartar
-filas sin objetivo -> particionar -> entrenar baseline y modelo -> evaluar.
+filas sin objetivo -> particionar -> entrenar baseline y modelo -> evaluar -> guardar
+models/<version>/ con modelo.joblib, metrics.json y metadata.json.
 
 Uso (desde fase-2/):
-    python train.py --data data/flight_data_2024_sample.csv
-    python train.py --data data/flight_data_2024_sample.csv --particion fecha
+    python train.py --data data/flight_data_2024_sample.csv --version v1
+    python train.py --data data/flight_data_2024_sample.csv --version v2 --particion fecha
 """
 
 import argparse
+import hashlib
+import json
+import platform
+import re
 import sys
 import warnings
+from datetime import datetime
+from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.dummy import DummyRegressor
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 from sklearn.model_selection import GroupShuffleSplit, train_test_split
@@ -30,6 +39,19 @@ from pipeline import (
 RANDOM_STATE = 42
 COLUMNA_FECHA = "fl_date"
 
+JUSTIFICACION_PARTICION = {
+    "aleatoria": (
+        "train_test_split por filas, igual que la fase 1. Los días de prueba también "
+        "tienen vuelos en entrenamiento, así que las métricas describen vuelos de días "
+        "ya representados, no días nuevos."
+    ),
+    "fecha": (
+        "GroupShuffleSplit por fl_date: ningún día de prueba aparece en entrenamiento. "
+        "Como los retrasos se propagan dentro de un mismo día, evalúa la generalización "
+        "a días no vistos del mismo periodo (no es una evaluación hacia el futuro)."
+    ),
+}
+
 # Aeropuertos poco frecuentes pueden aparecer solo en prueba. El OneHotEncoder usa
 # handle_unknown="ignore" justamente para eso, así que el aviso es esperado y solo
 # ensuciaría la salida
@@ -41,6 +63,18 @@ def parsear_argumentos(argv=None):
         description="Entrena el modelo de predicción de retrasos de llegada."
     )
     parser.add_argument("--data", required=True, help="Ruta al CSV de vuelos")
+    parser.add_argument(
+        "--version", required=True,
+        help="Versión del modelo (p. ej. v1); se guarda en <modelos-dir>/<version>/",
+    )
+    parser.add_argument(
+        "--modelos-dir", default="models",
+        help="Carpeta raíz de los modelos versionados (por defecto: models)",
+    )
+    parser.add_argument(
+        "--sobrescribir", action="store_true",
+        help="Permite reemplazar una versión existente",
+    )
     parser.add_argument(
         "--objetivo", default=OBJETIVO_POR_DEFECTO,
         help=f"Variable objetivo numérica (por defecto: {OBJETIVO_POR_DEFECTO})",
@@ -71,6 +105,9 @@ def parsear_argumentos(argv=None):
         parser.error("--test-size debe estar entre 0 y 1")
     if not 0 <= args.fraccion_faltantes < 1:
         parser.error("--fraccion-faltantes debe estar en [0, 1)")
+    # La versión se usa como nombre de carpeta: sin separadores de ruta
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", args.version):
+        parser.error("--version solo admite letras, números, '.', '_' y '-' (p. ej. v1)")
     return args
 
 
@@ -178,8 +215,75 @@ def imprimir_metricas(metricas, dias):
               f"días de prueba también en entrenamiento: {dias['dias_test_en_train']}")
 
 
+def hash_archivo(ruta):
+    """SHA-256 del CSV: identifica exactamente con qué datos se entrenó."""
+    sha = hashlib.sha256()
+    with open(ruta, "rb") as archivo:
+        for bloque in iter(lambda: archivo.read(1024 * 1024), b""):
+            sha.update(bloque)
+    return sha.hexdigest()
+
+
+def construir_metadata(args, df, df_modelar, X_train, X_test, dias):
+    return {
+        "version": args.version,
+        "fecha_entrenamiento": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "algoritmo": "LinearRegression",
+        "baseline": "DummyRegressor(strategy='median')",
+        "objetivo": args.objetivo,
+        "predictoras": PREDICTORAS,
+        "particion": {
+            "tipo": args.particion,
+            "justificacion": JUSTIFICACION_PARTICION[args.particion],
+            "test_size": args.test_size,
+            "random_state": args.random_state,
+        },
+        "datos": {
+            # Solo el nombre: las rutas absolutas cambian en cada computador
+            "archivo": Path(args.data).name,
+            "sha256": hash_archivo(args.data),
+            "filas_leidas": len(df),
+            "filas_con_objetivo": len(df_modelar),
+            "n_train": len(X_train),
+            "n_test": len(X_test),
+            "dias": dias,
+            "alcance": "Solo vuelos con llegada observada; cancelados y desviados "
+                       "se excluyen porque no tienen objetivo.",
+        },
+        "faltantes_inducidos": {
+            "columna": "crs_elapsed_time",
+            "fraccion": args.fraccion_faltantes,
+            "nota": "Las predictoras originales no tienen faltantes; se inducen de forma "
+                    "declarada (como en la fase 1) para ejercitar la imputación.",
+        },
+        "entorno": {
+            "python": platform.python_version(),
+            "scikit_learn": sklearn.__version__,
+            "pandas": pd.__version__,
+            "numpy": np.__version__,
+            "joblib": joblib.__version__,
+        },
+    }
+
+
+def guardar_artefactos(directorio, modelo, metricas, metadata):
+    directorio.mkdir(parents=True, exist_ok=True)
+    joblib.dump(modelo, directorio / "modelo.joblib")
+    for nombre, contenido in (("metrics.json", metricas), ("metadata.json", metadata)):
+        with open(directorio / nombre, "w", encoding="utf-8") as archivo:
+            json.dump(contenido, archivo, indent=2, ensure_ascii=False)
+            archivo.write("\n")
+
+
 def main(argv=None):
     args = parsear_argumentos(argv)
+
+    # Se comprueba antes de entrenar: una versión publicada no debe cambiar en
+    # silencio, porque sus métricas y metadatos dejarían de corresponder
+    directorio_version = Path(args.modelos_dir) / args.version
+    if directorio_version.exists() and not args.sobrescribir:
+        sys.exit(f"Error: la versión '{args.version}' ya existe en {directorio_version}. "
+                 f"Use otra versión o --sobrescribir.")
 
     df = pd.read_csv(args.data)
     try:
@@ -219,7 +323,13 @@ def main(argv=None):
         metricas["baseline"]["test"]["rmse"], metricas["modelo"]["test"]["rmse"]
     )
 
-    imprimir_metricas(metricas, resumir_dias(df_modelar, X_train, X_test))
+    dias = resumir_dias(df_modelar, X_train, X_test)
+    imprimir_metricas(metricas, dias)
+
+    metadata = construir_metadata(args, df, df_modelar, X_train, X_test, dias)
+    guardar_artefactos(directorio_version, modelo, metricas, metadata)
+    print(f"\nModelo guardado en {directorio_version}: "
+          f"modelo.joblib, metrics.json, metadata.json")
 
 
 if __name__ == "__main__":
