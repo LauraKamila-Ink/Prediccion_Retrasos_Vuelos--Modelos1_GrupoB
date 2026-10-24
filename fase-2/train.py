@@ -285,6 +285,10 @@ def main(argv=None):
         sys.exit(f"Error: la versión '{args.version}' ya existe en {directorio_version}. "
                  f"Use otra versión o --sobrescribir.")
 
+    if not Path(args.data).is_file():
+        sys.exit(f"Error: no se encontró el archivo de datos '{args.data}'. "
+                 f"Descárguelo de Kaggle y ubíquelo en fase-2/data/ (ver README).")
+
     df = pd.read_csv(args.data)
     try:
         validar_columnas(df, PREDICTORAS)
