@@ -1,0 +1,50 @@
+{
+  "version": "v2",
+  "fecha_entrenamiento": "2026-10-24T17:40:43-05:00",
+  "algoritmo": "LinearRegression",
+  "baseline": "DummyRegressor(strategy='median')",
+  "objetivo": "arr_delay",
+  "predictoras": [
+    "op_unique_carrier",
+    "origin",
+    "dest",
+    "crs_dep_time",
+    "crs_arr_time",
+    "crs_elapsed_time",
+    "distance",
+    "month",
+    "day_of_week"
+  ],
+  "particion": {
+    "tipo": "fecha",
+    "justificacion": "GroupShuffleSplit por fl_date: ningún día de prueba aparece en entrenamiento. Como los retrasos se propagan dentro de un mismo día, evalúa la generalización a días no vistos del mismo periodo (no es una evaluación hacia el futuro).",
+    "test_size": 0.2,
+    "random_state": 42
+  },
+  "datos": {
+    "archivo": "flight_data_2024_sample.csv",
+    "sha256": "3474b0573b40c922e97ae270b7ec6a9ab296ebd8d87767696d9cb7a030856264",
+    "filas_leidas": 10000,
+    "filas_con_objetivo": 9836,
+    "n_train": 7832,
+    "n_test": 2004,
+    "dias": {
+      "n_dias_train": 292,
+      "n_dias_test": 74,
+      "dias_test_en_train": 0
+    },
+    "alcance": "Solo vuelos con llegada observada; cancelados y desviados se excluyen porque no tienen objetivo."
+  },
+  "faltantes_inducidos": {
+    "columna": "crs_elapsed_time",
+    "fraccion": 0.01,
+    "nota": "Las predictoras originales no tienen faltantes; se inducen de forma declarada (como en la fase 1) para ejercitar la imputación."
+  },
+  "entorno": {
+    "python": "3.13.7",
+    "scikit_learn": "1.9.0",
+    "pandas": "3.0.5",
+    "numpy": "2.5.2",
+    "joblib": "1.6.0"
+  }
+}

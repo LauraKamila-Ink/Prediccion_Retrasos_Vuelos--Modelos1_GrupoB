@@ -1,0 +1,50 @@
+{
+  "version": "v1",
+  "fecha_entrenamiento": "2026-10-24T17:40:37-05:00",
+  "algoritmo": "LinearRegression",
+  "baseline": "DummyRegressor(strategy='median')",
+  "objetivo": "arr_delay",
+  "predictoras": [
+    "op_unique_carrier",
+    "origin",
+    "dest",
+    "crs_dep_time",
+    "crs_arr_time",
+    "crs_elapsed_time",
+    "distance",
+    "month",
+    "day_of_week"
+  ],
+  "particion": {
+    "tipo": "aleatoria",
+    "justificacion": "train_test_split por filas, igual que la fase 1. Los días de prueba también tienen vuelos en entrenamiento, así que las métricas describen vuelos de días ya representados, no días nuevos.",
+    "test_size": 0.2,
+    "random_state": 42
+  },
+  "datos": {
+    "archivo": "flight_data_2024_sample.csv",
+    "sha256": "3474b0573b40c922e97ae270b7ec6a9ab296ebd8d87767696d9cb7a030856264",
+    "filas_leidas": 10000,
+    "filas_con_objetivo": 9836,
+    "n_train": 7868,
+    "n_test": 1968,
+    "dias": {
+      "n_dias_train": 366,
+      "n_dias_test": 362,
+      "dias_test_en_train": 362
+    },
+    "alcance": "Solo vuelos con llegada observada; cancelados y desviados se excluyen porque no tienen objetivo."
+  },
+  "faltantes_inducidos": {
+    "columna": "crs_elapsed_time",
+    "fraccion": 0.01,
+    "nota": "Las predictoras originales no tienen faltantes; se inducen de forma declarada (como en la fase 1) para ejercitar la imputación."
+  },
+  "entorno": {
+    "python": "3.13.7",
+    "scikit_learn": "1.9.0",
+    "pandas": "3.0.5",
+    "numpy": "2.5.2",
+    "joblib": "1.6.0"
+  }
+}

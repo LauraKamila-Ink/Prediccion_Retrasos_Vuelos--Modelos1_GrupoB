@@ -3,3 +3,16 @@ __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 *.joblib
+
+# Datos pesados: se descargan de Kaggle (ver README), no se versionan
+*.csv
+
+# Archivos de contexto para agentes de IA: son locales, no forman parte de la entrega
+AGENTS.md
+AGENT.md
+
+# Configuración del IDE y del sistema operativo
+.idea/
+.DS_Store
+Calificacion_Fase1_Equipo_Retrasos_Vuelos.pdf
+fase-2.md
