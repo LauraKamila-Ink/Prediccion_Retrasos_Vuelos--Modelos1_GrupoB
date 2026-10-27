@@ -64,6 +64,15 @@ def validar_datos_entrada(df):
         )
 
 
+def predecir(modelo, df):
+    """Valida las entradas y devuelve las predictoras junto a la predicción."""
+    validar_datos_entrada(df)
+    X = df.loc[:, PREDICTORAS]
+    resultado = X.copy()
+    resultado["prediccion_arr_delay"] = modelo.predict(X)
+    return resultado
+
+
 def main(argv=None):
     args = parsear_argumentos(argv)
     ruta_datos = Path(args.data)
@@ -76,14 +85,9 @@ def main(argv=None):
 
     df = pd.read_csv(ruta_datos)
     try:
-        validar_datos_entrada(df)
+        resultado = predecir(joblib.load(ruta_modelo), df)
     except ValueError as error:
         sys.exit(f"Error: {error}")
-
-    X = df.loc[:, PREDICTORAS]
-    modelo = joblib.load(ruta_modelo)
-    resultado = X.copy()
-    resultado["arr_delay_predicho"] = modelo.predict(X)
 
     ruta_salida = Path(args.output)
     ruta_salida.parent.mkdir(parents=True, exist_ok=True)
