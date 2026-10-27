@@ -1,7 +1,11 @@
 {
   "version": "v2",
   "fecha_entrenamiento": "2026-10-24T17:40:43-05:00",
+  "tipo_problema": "regresion",
   "algoritmo": "LinearRegression",
+  "parametros_modelo": {
+    "fit_intercept": true
+  },
   "baseline": "DummyRegressor(strategy='median')",
   "objetivo": "arr_delay",
   "predictoras": [
@@ -15,6 +19,20 @@
     "month",
     "day_of_week"
   ],
+  "tipos_predictoras": {
+    "op_unique_carrier": "categorica",
+    "origin": "categorica",
+    "dest": "categorica",
+    "crs_dep_time": "numerica",
+    "crs_arr_time": "numerica",
+    "crs_elapsed_time": "numerica",
+    "distance": "numerica",
+    "month": "numerica",
+    "day_of_week": "numerica"
+  },
+  "codigo": {
+    "commit": "d934afba3395464419e7e147c9c36d1754865493"
+  },
   "particion": {
     "tipo": "fecha",
     "justificacion": "GroupShuffleSplit por fl_date: ningún día de prueba aparece en entrenamiento. Como los retrasos se propagan dentro de un mismo día, evalúa la generalización a días no vistos del mismo periodo (no es una evaluación hacia el futuro).",
@@ -23,6 +41,7 @@
   },
   "datos": {
     "archivo": "flight_data_2024_sample.csv",
+    "fuente": "Kaggle — Flight Delay Dataset 2024 (https://www.kaggle.com/datasets/hrishitpatil/flight-data-2024)",
     "sha256": "3474b0573b40c922e97ae270b7ec6a9ab296ebd8d87767696d9cb7a030856264",
     "filas_leidas": 10000,
     "filas_con_objetivo": 9836,
@@ -45,6 +64,7 @@
     "scikit_learn": "1.9.0",
     "pandas": "3.0.5",
     "numpy": "2.5.2",
-    "joblib": "1.6.0"
+    "joblib": "1.6.0",
+    "requirements": "requirements.txt"
   }
 }

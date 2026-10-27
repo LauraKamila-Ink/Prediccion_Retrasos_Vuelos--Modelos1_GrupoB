@@ -9,4 +9,5 @@ COPY pipeline.py predict.py train.py ./
 
 RUN mkdir -p /app/data /app/models /app/outputs
 
-ENTRYPOINT ["python", "predict.py"]
+ENTRYPOINT ["python"]
+CMD ["predict.py"]

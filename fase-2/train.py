@@ -224,14 +224,40 @@ def hash_archivo(ruta):
     return sha.hexdigest()
 
 
+def hash_codigo():
+    """Identifica las fuentes principales cuando no hay metadatos de Git en runtime."""
+    sha = hashlib.sha256()
+    for nombre in ("pipeline.py", "train.py"):
+        ruta = Path(__file__).with_name(nombre)
+        sha.update(nombre.encode("utf-8"))
+        with ruta.open("rb") as archivo:
+            for bloque in iter(lambda: archivo.read(1024 * 1024), b""):
+                sha.update(bloque)
+    return sha.hexdigest()
+
+
 def construir_metadata(args, df, df_modelar, X_train, X_test, dias):
     return {
         "version": args.version,
         "fecha_entrenamiento": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "tipo_problema": "regresion",
         "algoritmo": "LinearRegression",
+        "parametros_modelo": {"fit_intercept": True},
         "baseline": "DummyRegressor(strategy='median')",
         "objetivo": args.objetivo,
         "predictoras": PREDICTORAS,
+        "tipos_predictoras": {
+            "op_unique_carrier": "categorica",
+            "origin": "categorica",
+            "dest": "categorica",
+            "crs_dep_time": "numerica",
+            "crs_arr_time": "numerica",
+            "crs_elapsed_time": "numerica",
+            "distance": "numerica",
+            "month": "numerica",
+            "day_of_week": "numerica",
+        },
+        "codigo": {"sha256": hash_codigo()},
         "particion": {
             "tipo": args.particion,
             "justificacion": JUSTIFICACION_PARTICION[args.particion],
@@ -241,6 +267,10 @@ def construir_metadata(args, df, df_modelar, X_train, X_test, dias):
         "datos": {
             # Solo el nombre: las rutas absolutas cambian en cada computador
             "archivo": Path(args.data).name,
+            "fuente": (
+                "Kaggle — Flight Delay Dataset 2024 "
+                "(https://www.kaggle.com/datasets/hrishitpatil/flight-data-2024)"
+            ),
             "sha256": hash_archivo(args.data),
             "filas_leidas": len(df),
             "filas_con_objetivo": len(df_modelar),
