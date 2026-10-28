@@ -1,9 +1,10 @@
 """
 Entrena el modelo de la fase 1 desde la línea de comandos.
 
-Flujo: leer datos -> validar columnas -> inducir faltantes (declarados) -> descartar
-filas sin objetivo -> particionar -> entrenar baseline y modelo -> evaluar -> guardar
-models/<version>/ con modelo.joblib, metrics.json y metadata.json.
+Flujo: leer datos -> validar columnas -> descartar filas sin objetivo -> particionar
+-> entrenar baseline y modelo -> evaluar -> guardar models/<version>/ con modelo.joblib,
+metrics.json y metadata.json. La simulación opcional de faltantes está desactivada
+por defecto: no sustituye faltantes naturales ni autorización docente.
 
 Uso (desde fase-2/):
     python train.py --data data/flight_data_2024_sample.csv --version v1
@@ -95,9 +96,10 @@ def parsear_argumentos(argv=None):
         help=f"Semilla para el muestreo y la partición (por defecto: {RANDOM_STATE})",
     )
     parser.add_argument(
-        "--fraccion-faltantes", type=float, default=0.01,
-        help="Fracción de NaN inducidos en crs_elapsed_time, como en la fase 1. "
-             "Use 0 para desactivarlos (por defecto: 0.01)",
+        "--fraccion-faltantes", type=float, default=0.0,
+        help="Fracción sintética de NaN en crs_elapsed_time para probar imputación; "
+             "no son faltantes naturales. Requiere autorización para presentarlos "
+             "como requisito del curso (por defecto: 0)",
     )
     args = parser.parse_args(argv)
 
@@ -283,8 +285,12 @@ def construir_metadata(args, df, df_modelar, X_train, X_test, dias):
         "faltantes_inducidos": {
             "columna": "crs_elapsed_time",
             "fraccion": args.fraccion_faltantes,
-            "nota": "Las predictoras originales no tienen faltantes; se inducen de forma "
-                    "declarada (como en la fase 1) para ejercitar la imputación.",
+            "nota": (
+                "Las predictoras originales no tienen faltantes. Una fracción mayor "
+                "que cero es una simulación sintética, no faltantes naturales. El equipo "
+                "cuenta con autorización escrita para usar esta simulación documentada "
+                "como alternativa al requisito."
+            ),
         },
         "entorno": {
             "python": platform.python_version(),

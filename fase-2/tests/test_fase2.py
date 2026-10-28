@@ -76,8 +76,6 @@ def modelo_entrenado(tmp_path, datos_csv):
             "v1",
             "--modelos-dir",
             str(directorio_modelos),
-            "--fraccion-faltantes",
-            "0",
         ]
     )
     return directorio_modelos
@@ -94,6 +92,7 @@ def test_entrenamiento_guarda_modelo_metricas_y_metadatos(modelo_entrenado):
     assert metadata["version"] == "v1"
     assert metadata["objetivo"] == "arr_delay"
     assert metadata["codigo"]["sha256"]
+    assert metadata["faltantes_inducidos"]["fraccion"] == 0
     assert metadata["datos"]["n_train"] + metadata["datos"]["n_test"] == 30
 
 
