@@ -22,19 +22,19 @@ El problema se aborda como un problema de **regresión supervisada**.
 | Fase | Contenido         | Estado |
 | ---- | ----------------- | ------ |
 | 1    | Modelo predictivo | Completada (entrega 1) |
-| 2    | Scripts y Docker  | En progreso: Parte 1 completada, Parte 2 pendiente |
+| 2    | Scripts y Docker  | Parte 1 y Parte 2 completadas |
 | 3    | API REST          | Pendiente |
 | 4    | Monitoreo         | Pendiente |
 
-**Fase 2 — avance:**
+**Entregables de Fase 2:**
 
 * [x] Carpeta `fase-2/`, `requirements.txt` y reglas de `.gitignore`.
 * [x] Pipeline de la fase 1 extraído a un módulo importable (`pipeline.py`).
 * [x] `train.py` con parámetros por consola (datos, variable objetivo, versión, partición).
 * [x] Modelos versionados en `models/v1` y `models/v2` con `modelo.joblib`, `metrics.json` y `metadata.json`.
-* [ ] Archivo de prueba `prediccion.csv` y `predict.py` (salida en `outputs/predicciones.csv`).
-* [ ] Pruebas automatizadas con `pytest` en `tests/`.
-* [ ] `Dockerfile` y `README.md` de la fase 2.
+* [x] Archivo de prueba `prediccion.csv` y `predict.py` (salida en `outputs/predicciones.csv`).
+* [x] Pruebas automatizadas con `pytest` en `tests/`.
+* [x] `Dockerfile` y documentación de inferencia de la fase 2.
 
 ---
 
@@ -64,8 +64,8 @@ Los resultados aplican únicamente a **vuelos con llegada observada**: los vuelo
 
 ## Requisitos
 
-* **Python 3.11 o superior**.
-* El entorno utilizado durante el desarrollo es **Python 3.13.7**.
+* **Python 3.11 o superior**. La imagen Docker usa `python:3.11-slim`; las pruebas locales se validaron con Python 3.11.9.
+* Los artefactos v1 y v2 existentes registran Python 3.13.7 en sus metadatos. La carga de los modelos y la inferencia también se validaron con Python 3.11.9.
 * Entorno virtual. No instalar paquetes de forma global.
 * Cuenta de Kaggle para descargar los datos.
 
@@ -93,7 +93,7 @@ pip install -r fase-2/requirements.txt    # fase 2: solo dependencias de los scr
 
 ## Datos
 
-Los archivos CSV **no se versionan** debido a su tamaño y están excluidos mediante `.gitignore`. Por lo tanto, deben descargarse antes de ejecutar el proyecto.
+Los CSV originales no se versionan por su tamaño y están excluidos mediante `.gitignore`; deben descargarse antes del entrenamiento. La excepción es la pequeña muestra de inferencia `fase-2/data/prediccion.csv`, que sí se versiona para poder probar `predict.py` sin el objetivo.
 
 ### 1. Descargar los datos
 
@@ -133,7 +133,7 @@ El archivo completo se utiliza únicamente para comprobaciones puntuales sobre l
 7. **Evaluación:** MAE (métrica principal), RMSE y R² en entrenamiento y prueba.
 8. **Serialización:** el pipeline completo se guarda con `joblib`.
 
-> **Valores faltantes inducidos.** Ninguna de las nueve predictoras tiene valores faltantes en el dataset original (0.00 % sobre 7 079 081 filas). Para aplicar una estrategia de imputación se indujo, de forma declarada y reproducible, un 1 % de `NaN` en `crs_elapsed_time` (sección 2.7 del notebook). No es una propiedad del dataset original.
+> **Faltantes y alcance de la imputación.** Las nueve predictoras no tienen valores faltantes en el CSV original. La versión histórica v1/v2 se entrenó con una máscara sintética del 1 % en `crs_elapsed_time`, como consta en sus metadatos. El equipo cuenta con autorización escrita del docente para usar esta simulación documentada como alternativa al requisito; no equivale a faltantes naturales. Las nuevas ejecuciones de `train.py` no inducen valores por defecto; se puede solicitar explícitamente la simulación autorizada con `--fraccion-faltantes 0.01`.
 
 ### Resultados (conjunto de prueba)
 
@@ -157,7 +157,7 @@ jupyter lab notebook.ipynb
 * **Ejecutar siempre desde `fase-1/`.** El notebook utiliza la ruta relativa `data/flight_data_2024_sample.csv`.
 * **Seleccionar el kernel del entorno virtual**, no el Python del sistema.
 * El notebook está preparado para ejecutarse de principio a fin mediante **Restart Kernel & Run All**.
-* El repositorio conserva el notebook **con sus salidas** (tablas, métricas y gráficos), por lo que puede consultarse sin ejecutarlo.
+* El notebook está versionado sin salidas guardadas; para reproducir sus tablas, métricas y gráficos se necesita descargar `flight_data_2024_sample.csv` en `fase-1/data/` y ejecutar todas las celdas.
 
 ### Validar el dataset
 
@@ -177,7 +177,7 @@ python validar_dataset.py --data data/flight_data_2024.csv --nrows 500000
 
 ---
 
-## Fase 2 — Scripts y Docker (Parte 1)
+## Fase 2 — Scripts y Docker
 
 La fase 2 convierte el notebook en una aplicación que se entrena desde la línea de comandos. **No se desarrolla un modelo nuevo**: se reutiliza exactamente el pipeline de la fase 1.
 
@@ -187,9 +187,15 @@ La fase 2 convierte el notebook en una aplicación que se entrena desde la líne
 fase-2/
 ├── pipeline.py          <- módulo compartido: predictoras, ingeniería de características y pipeline
 ├── train.py             <- entrena, evalúa y guarda una versión del modelo
-├── requirements.txt     <- dependencias de ejecución con versiones fijadas
+├── requirements.txt     <- dependencias con versiones fijadas
 ├── .gitignore           <- excepciones de la fase (modelos versionados, outputs/)
-├── data/                <- datos de entrada (CSV no versionados)
+├── .dockerignore        <- excluye archivos innecesarios de la imagen
+├── Dockerfile           <- imagen de inferencia
+├── data/                <- prediccion.csv se versiona; datasets originales se descargan
+│   └── prediccion.csv   <- muestra con las nueve predictoras pre-vuelo
+├── predict.py           <- genera predicciones desde un CSV
+├── tests/
+│   └── test_fase2.py    <- pruebas unitarias y de integración
 └── models/
     ├── v1/              <- partición aleatoria (reproduce la fase 1)
     │   ├── modelo.joblib
@@ -224,9 +230,11 @@ Se ejecuta desde `fase-2/`:
 ```bash
 cd fase-2
 
-python train.py --data data/flight_data_2024_sample.csv --version v1 --particion aleatoria
-python train.py --data data/flight_data_2024_sample.csv --version v2 --particion fecha
+python train.py --data data/flight_data_2024_sample.csv --version v3 --particion aleatoria --fraccion-faltantes 0.01
+python train.py --data data/flight_data_2024_sample.csv --version v4 --particion fecha --fraccion-faltantes 0.01
 ```
+
+Los modelos `v1` y `v2` ya están versionados; por eso los ejemplos usan identificadores nuevos. `train.py` rechaza una versión existente salvo que se indique explícitamente `--sobrescribir`.
 
 | Argumento | Por defecto | Descripción |
 | --------- | ----------- | ----------- |
@@ -236,9 +244,15 @@ python train.py --data data/flight_data_2024_sample.csv --version v2 --particion
 | `--particion` | `aleatoria` | `aleatoria`: `train_test_split` por filas. `fecha`: `GroupShuffleSplit` por `fl_date`. |
 | `--test-size` | `0.2` | Fracción de prueba. Con `--particion fecha` es la fracción de **días**, no de filas. |
 | `--random-state` | `42` | Semilla para el muestreo y la partición. |
-| `--fraccion-faltantes` | `0.01` | Fracción de `NaN` inducidos en `crs_elapsed_time`, igual que en la fase 1. `0` los desactiva. |
+| `--fraccion-faltantes` | `0` | Simulación opcional de `NaN` en `crs_elapsed_time` para probar la imputación. Para reproducir la simulación autorizada de los modelos v1/v2, indicar `0.01`; no representa faltantes naturales. |
 | `--modelos-dir` | `models` | Carpeta raíz de los modelos versionados. |
 | `--sobrescribir` | — | Permite reemplazar una versión existente. Sin esta opción, una versión ya guardada no se modifica. |
+
+Para consultar todas las opciones:
+
+```powershell
+python train.py --help
+```
 
 **Flujo del script:**
 
@@ -272,6 +286,64 @@ Los retrasos se propagan dentro de un mismo día: el clima, la congestión de lo
 La partición por fecha (`GroupShuffleSplit` agrupando por `fl_date`) garantiza que ningún día de prueba aparezca en entrenamiento y mide la generalización **a días no vistos del mismo periodo**. No es una evaluación hacia el futuro: los días de prueba están repartidos a lo largo de 2024.
 
 Con ambas particiones la conclusión se mantiene: la regresión lineal no supera al baseline en MAE.
+
+## Parte 2: Inferencia, Pruebas y Docker
+
+Los siguientes comandos se ejecutan desde `fase-2/`. Asegúrate de tener instaladas las dependencias con `pip install -r requirements.txt` y de contar con los modelos versionados en `models/v1/` y `models/v2/`.
+
+### Inferencia con `predict.py`
+
+El script recibe un CSV que contenga exclusivamente las nueve variables predictoras pre-vuelo. Rechaza `arr_delay`, variables posteriores al despegue y cualquier otra columna no permitida; también valida los tipos numéricos y categóricos. Los valores nulos en variables numéricas se procesan con la imputación mediana guardada en el pipeline. Categorías no observadas se codifican con ceros mediante `OneHotEncoder(handle_unknown="ignore")`. La salida conserva el orden de las filas y las predictoras, y agrega `prediccion_arr_delay`.
+
+```powershell
+python predict.py --data data/prediccion.csv --version v2 --output outputs/predicciones.csv
+python predict.py --help
+```
+
+`--data` indica el CSV de entrada, `--version` selecciona el modelo versionado en `models/<version>/modelo.joblib` y `--output` determina la ruta del CSV de resultados. La carpeta de salida se crea si no existe.
+
+### Pruebas automatizadas con `pytest`
+
+Ejecuta la suite desde `fase-2/`:
+
+```powershell
+python -m pytest -v
+```
+
+Las pruebas usan datos sintéticos y `tmp_path` para verificar el entrenamiento y almacenamiento de artefactos, la carga de v1/v2 y la preservación de predicciones al serializar, el tratamiento de nulos y categorías nuevas, el orden y la cantidad de filas, el rechazo de columnas o tipos inválidos y de variables con fuga, la salida del CLI y la protección frente a sobrescritura de versiones.
+
+### Inferencia con Docker
+
+Con Docker Desktop en ejecución, construye la imagen desde `fase-2/`:
+
+```powershell
+docker build -t retrasos-vuelos:fase2 .
+```
+
+Monta los datos y modelos como volúmenes de solo lectura y `outputs/` como volumen escribible para conservar los resultados fuera del contenedor:
+
+```powershell
+New-Item -ItemType Directory -Force outputs | Out-Null
+
+docker run --rm `
+  --mount "type=bind,source=$((Get-Location).Path)\data,target=/app/data,readonly" `
+  --mount "type=bind,source=$((Get-Location).Path)\models,target=/app/models,readonly" `
+  --mount "type=bind,source=$((Get-Location).Path)\outputs,target=/app/outputs" `
+  retrasos-vuelos:fase2 `
+  predict.py --data data/prediccion.csv --version v2 --output outputs/predicciones.csv
+```
+
+La misma imagen permite ejecutar el entrenamiento. Monta `models/` como carpeta escribible y usa un identificador de versión nuevo:
+
+```powershell
+docker run --rm `
+  --mount "type=bind,source=$((Get-Location).Path)\data,target=/app/data,readonly" `
+  --mount "type=bind,source=$((Get-Location).Path)\models,target=/app/models" `
+  retrasos-vuelos:fase2 `
+  train.py --data data/flight_data_2024_sample.csv --version v-docker --particion fecha
+```
+
+En ambos comandos la imagen usa `ENTRYPOINT ["python"]`: el nombre del script (`predict.py` o `train.py`) se pasa como argumento después de la imagen. La salida de predicción y los artefactos de entrenamiento persisten en las carpetas montadas del anfitrión.
 
 ---
 

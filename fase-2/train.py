@@ -1,9 +1,10 @@
 """
 Entrena el modelo de la fase 1 desde la línea de comandos.
 
-Flujo: leer datos -> validar columnas -> inducir faltantes (declarados) -> descartar
-filas sin objetivo -> particionar -> entrenar baseline y modelo -> evaluar -> guardar
-models/<version>/ con modelo.joblib, metrics.json y metadata.json.
+Flujo: leer datos -> validar columnas -> descartar filas sin objetivo -> particionar
+-> entrenar baseline y modelo -> evaluar -> guardar models/<version>/ con modelo.joblib,
+metrics.json y metadata.json. La simulación opcional de faltantes está desactivada
+por defecto: no sustituye faltantes naturales ni autorización docente.
 
 Uso (desde fase-2/):
     python train.py --data data/flight_data_2024_sample.csv --version v1
@@ -95,9 +96,10 @@ def parsear_argumentos(argv=None):
         help=f"Semilla para el muestreo y la partición (por defecto: {RANDOM_STATE})",
     )
     parser.add_argument(
-        "--fraccion-faltantes", type=float, default=0.01,
-        help="Fracción de NaN inducidos en crs_elapsed_time, como en la fase 1. "
-             "Use 0 para desactivarlos (por defecto: 0.01)",
+        "--fraccion-faltantes", type=float, default=0.0,
+        help="Fracción sintética de NaN en crs_elapsed_time para probar imputación; "
+             "no son faltantes naturales. Requiere autorización para presentarlos "
+             "como requisito del curso (por defecto: 0)",
     )
     args = parser.parse_args(argv)
 
@@ -224,14 +226,40 @@ def hash_archivo(ruta):
     return sha.hexdigest()
 
 
+def hash_codigo():
+    """Identifica las fuentes principales cuando no hay metadatos de Git en runtime."""
+    sha = hashlib.sha256()
+    for nombre in ("pipeline.py", "train.py"):
+        ruta = Path(__file__).with_name(nombre)
+        sha.update(nombre.encode("utf-8"))
+        with ruta.open("rb") as archivo:
+            for bloque in iter(lambda: archivo.read(1024 * 1024), b""):
+                sha.update(bloque)
+    return sha.hexdigest()
+
+
 def construir_metadata(args, df, df_modelar, X_train, X_test, dias):
     return {
         "version": args.version,
         "fecha_entrenamiento": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "tipo_problema": "regresion",
         "algoritmo": "LinearRegression",
+        "parametros_modelo": {"fit_intercept": True},
         "baseline": "DummyRegressor(strategy='median')",
         "objetivo": args.objetivo,
         "predictoras": PREDICTORAS,
+        "tipos_predictoras": {
+            "op_unique_carrier": "categorica",
+            "origin": "categorica",
+            "dest": "categorica",
+            "crs_dep_time": "numerica",
+            "crs_arr_time": "numerica",
+            "crs_elapsed_time": "numerica",
+            "distance": "numerica",
+            "month": "numerica",
+            "day_of_week": "numerica",
+        },
+        "codigo": {"sha256": hash_codigo()},
         "particion": {
             "tipo": args.particion,
             "justificacion": JUSTIFICACION_PARTICION[args.particion],
@@ -241,6 +269,10 @@ def construir_metadata(args, df, df_modelar, X_train, X_test, dias):
         "datos": {
             # Solo el nombre: las rutas absolutas cambian en cada computador
             "archivo": Path(args.data).name,
+            "fuente": (
+                "Kaggle — Flight Delay Dataset 2024 "
+                "(https://www.kaggle.com/datasets/hrishitpatil/flight-data-2024)"
+            ),
             "sha256": hash_archivo(args.data),
             "filas_leidas": len(df),
             "filas_con_objetivo": len(df_modelar),
@@ -253,8 +285,12 @@ def construir_metadata(args, df, df_modelar, X_train, X_test, dias):
         "faltantes_inducidos": {
             "columna": "crs_elapsed_time",
             "fraccion": args.fraccion_faltantes,
-            "nota": "Las predictoras originales no tienen faltantes; se inducen de forma "
-                    "declarada (como en la fase 1) para ejercitar la imputación.",
+            "nota": (
+                "Las predictoras originales no tienen faltantes. Una fracción mayor "
+                "que cero es una simulación sintética, no faltantes naturales. El equipo "
+                "cuenta con autorización escrita para usar esta simulación documentada "
+                "como alternativa al requisito."
+            ),
         },
         "entorno": {
             "python": platform.python_version(),
