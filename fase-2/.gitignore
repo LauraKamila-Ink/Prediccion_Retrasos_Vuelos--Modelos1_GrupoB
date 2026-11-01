@@ -1,0 +1,12 @@
+# Las reglas de la raíz ignoran *.csv y *.joblib; aquí se definen las excepciones
+# propias de la fase 2.
+
+# Archivo pequeño de vuelos de ejemplo para predict.py (Parte 2): sí se versiona
+!data/prediccion.csv
+
+# Predicciones generadas: se regeneran ejecutando predict.py
+outputs/
+
+# Modelos versionados: se entregan para poder usarlos fuera de la sesión de
+# entrenamiento (observación de la calificación de la fase 1)
+!models/**/modelo.joblib
