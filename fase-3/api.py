@@ -1,9 +1,12 @@
 """API REST para consultar los modelos versionados de la fase 2."""
 
+import csv
 import math
 import os
 import re
 import sys
+import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +31,58 @@ if not DIRECTORIO_MODELOS.is_absolute():
 
 COLUMNAS_NUMERICAS = set(PREDICTORAS) - set(COLUMNAS_CATEGORICAS)
 app = FastAPI(title="API de predicción de retrasos de vuelos")
+RUTA_REGISTRO = Path(
+    os.getenv("REQUEST_LOG_PATH", str(ROOT_DIR / "fase-4" / "registro_solicitudes.csv"))
+)
+if not RUTA_REGISTRO.is_absolute():
+    RUTA_REGISTRO = ROOT_DIR / RUTA_REGISTRO
+_BLOQUEO_REGISTRO = threading.Lock()
+
+
+def _registrar_solicitud(estado_http: int, version: str = "", prediccion: Any = ""):
+    RUTA_REGISTRO.parent.mkdir(parents=True, exist_ok=True)
+    with _BLOQUEO_REGISTRO:
+        escribir_encabezado = (
+            not RUTA_REGISTRO.exists() or RUTA_REGISTRO.stat().st_size == 0
+        )
+        with RUTA_REGISTRO.open("a", newline="", encoding="utf-8") as archivo:
+            escritor = csv.DictWriter(
+                archivo,
+                fieldnames=["fecha_hora", "estado_http", "version", "prediccion"],
+            )
+            if escribir_encabezado:
+                escritor.writeheader()
+            escritor.writerow(
+                {
+                    "fecha_hora": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    "estado_http": estado_http,
+                    "version": version,
+                    "prediccion": prediccion,
+                }
+            )
+
+
+@app.middleware("http")
+async def registrar_predicciones(request: Request, call_next):
+    if request.url.path != "/predict":
+        return await call_next(request)
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        _registrar_solicitud(
+            500,
+            request.scope.get("fase3_version_modelo", ""),
+            request.scope.get("fase3_prediccion", ""),
+        )
+        raise
+
+    _registrar_solicitud(
+        response.status_code,
+        request.scope.get("fase3_version_modelo", ""),
+        request.scope.get("fase3_prediccion", ""),
+    )
+    return response
 
 
 def _crear_dataframe(payload: dict[str, Any]) -> pd.DataFrame:
@@ -102,8 +157,8 @@ def predict(payload: dict[str, Any], request: Request):
         raise HTTPException(status_code=422, detail=str(error)) from error
 
     modelo = _cargar_modelo()
-    request.state.version_modelo = VERSION_MODELO
+    request.scope["fase3_version_modelo"] = VERSION_MODELO
     resultado = predecir(modelo, datos)
     prediccion = float(resultado["prediccion_arr_delay"].iloc[0])
-    request.state.prediccion = prediccion
+    request.scope["fase3_prediccion"] = prediccion
     return {"prediccion": prediccion, "version": VERSION_MODELO}
