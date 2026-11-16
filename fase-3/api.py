@@ -110,7 +110,14 @@ def _crear_dataframe(payload: dict[str, Any]) -> pd.DataFrame:
                     status_code=422,
                     detail=f"La variable '{columna}' debe ser numérica o null.",
                 )
-            if not math.isfinite(valor):
+            try:
+                numero = float(valor)
+            except OverflowError as error:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"La variable '{columna}' debe ser un número finito.",
+                ) from error
+            if not math.isfinite(numero):
                 raise HTTPException(
                     status_code=422,
                     detail=f"La variable '{columna}' debe ser un número finito.",

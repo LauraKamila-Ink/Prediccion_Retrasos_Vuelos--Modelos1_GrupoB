@@ -11,6 +11,9 @@ COLUMNAS_REQUERIDAS = {"fecha_hora", "estado_http", "version", "prediccion"}
 
 
 def calcular_metricas(ruta_registro: Path) -> tuple[int, float | None]:
+    if ruta_registro.is_file() and ruta_registro.stat().st_size == 0:
+        return 0, None
+
     with ruta_registro.open("r", newline="", encoding="utf-8") as archivo:
         lector = csv.DictReader(archivo)
         if not lector.fieldnames or not COLUMNAS_REQUERIDAS.issubset(lector.fieldnames):
