@@ -6,6 +6,7 @@ __pycache__/
 
 # Datos pesados: se descargan de Kaggle (ver README), no se versionan
 *.csv
+!fase-4/registro_ejemplo.csv
 
 # Archivos de contexto para agentes de IA: son locales, no forman parte de la entrega
 AGENTS.md
