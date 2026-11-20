@@ -1,12 +1,9 @@
 """API REST para consultar los modelos versionados de la fase 2."""
 
-import csv
 import math
 import os
 import re
 import sys
-import threading
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -16,11 +13,14 @@ from fastapi import FastAPI, HTTPException, Request
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 FASE_2_DIR = ROOT_DIR / "fase-2"
-if str(FASE_2_DIR) not in sys.path:
-    sys.path.insert(0, str(FASE_2_DIR))
+FASE_4_DIR = ROOT_DIR / "fase-4"
+for _directorio in (FASE_2_DIR, FASE_4_DIR):
+    if str(_directorio) not in sys.path:
+        sys.path.insert(0, str(_directorio))
 
 from pipeline import COLUMNAS_CATEGORICAS, PREDICTORAS  # noqa: E402
 from predict import predecir, validar_datos_entrada  # noqa: E402
+from registro import registrar_solicitud  # noqa: E402
 
 VERSION_MODELO = os.getenv("MODEL_VERSION", "v1")
 DIRECTORIO_MODELOS = Path(
@@ -36,30 +36,6 @@ RUTA_REGISTRO = Path(
 )
 if not RUTA_REGISTRO.is_absolute():
     RUTA_REGISTRO = ROOT_DIR / RUTA_REGISTRO
-_BLOQUEO_REGISTRO = threading.Lock()
-
-
-def _registrar_solicitud(estado_http: int, version: str = "", prediccion: Any = ""):
-    RUTA_REGISTRO.parent.mkdir(parents=True, exist_ok=True)
-    with _BLOQUEO_REGISTRO:
-        escribir_encabezado = (
-            not RUTA_REGISTRO.exists() or RUTA_REGISTRO.stat().st_size == 0
-        )
-        with RUTA_REGISTRO.open("a", newline="", encoding="utf-8") as archivo:
-            escritor = csv.DictWriter(
-                archivo,
-                fieldnames=["fecha_hora", "estado_http", "version", "prediccion"],
-            )
-            if escribir_encabezado:
-                escritor.writeheader()
-            escritor.writerow(
-                {
-                    "fecha_hora": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                    "estado_http": estado_http,
-                    "version": version,
-                    "prediccion": prediccion,
-                }
-            )
 
 
 @app.middleware("http")
@@ -70,14 +46,16 @@ async def registrar_predicciones(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception:
-        _registrar_solicitud(
+        registrar_solicitud(
+            RUTA_REGISTRO,
             500,
             request.scope.get("fase3_version_modelo", ""),
             request.scope.get("fase3_prediccion", ""),
         )
         raise
 
-    _registrar_solicitud(
+    registrar_solicitud(
+        RUTA_REGISTRO,
         response.status_code,
         request.scope.get("fase3_version_modelo", ""),
         request.scope.get("fase3_prediccion", ""),
