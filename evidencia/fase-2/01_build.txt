@@ -1,0 +1,104 @@
+$ cd fase-2 && docker build -t retrasos-vuelos:fase2 .
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 283B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.11-slim
+#2 DONE 0.4s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 210B done
+#3 DONE 0.0s
+
+#4 [1/6] FROM docker.io/library/python:3.11-slim@sha256:07d4824036af339fa1b6ef769cc99d9c10a141769538b52b3b597c84f7a7b535
+#4 DONE 0.0s
+
+#5 [2/6] WORKDIR /app
+#5 CACHED
+
+#6 [internal] load build context
+#6 transferring context: 27.19kB done
+#6 DONE 0.0s
+
+#7 [3/6] COPY requirements.txt .
+#7 DONE 0.1s
+
+#8 [4/6] RUN pip install --no-cache-dir -r requirements.txt
+#8 3.632 Collecting pandas==3.0.5 (from -r requirements.txt (line 1))
+#8 4.184   Downloading pandas-3.0.5-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (79 kB)
+#8 4.381      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 79.5/79.5 kB 373.2 kB/s eta 0:00:00
+#8 5.046 Collecting numpy==2.4.6 (from -r requirements.txt (line 2))
+#8 5.201   Downloading numpy-2.4.6-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (6.6 kB)
+#8 5.455 Collecting scikit-learn==1.9.0 (from -r requirements.txt (line 3))
+#8 5.610   Downloading scikit_learn-1.9.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (11 kB)
+#8 5.808 Collecting joblib==1.6.0 (from -r requirements.txt (line 4))
+#8 5.972   Downloading joblib-1.6.0-py3-none-any.whl.metadata (6.5 kB)
+#8 6.190 Collecting pytest==9.1.1 (from -r requirements.txt (line 5))
+#8 6.344   Downloading pytest-9.1.1-py3-none-any.whl.metadata (7.6 kB)
+#8 6.558 Collecting python-dateutil>=2.8.2 (from pandas==3.0.5->-r requirements.txt (line 1))
+#8 6.712   Downloading python_dateutil-4.0.0-py3-none-any.whl.metadata (7.3 kB)
+#8 7.127 Collecting scipy>=1.10.0 (from scikit-learn==1.9.0->-r requirements.txt (line 3))
+#8 7.288   Downloading scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+#8 7.325      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.1/62.1 kB 1.8 MB/s eta 0:00:00
+#8 7.570 Collecting narwhals>=2.0.1 (from scikit-learn==1.9.0->-r requirements.txt (line 3))
+#8 7.724   Downloading narwhals-2.29.0-py3-none-any.whl.metadata (15 kB)
+#8 7.906 Collecting threadpoolctl>=3.5.0 (from scikit-learn==1.9.0->-r requirements.txt (line 3))
+#8 8.060   Downloading threadpoolctl-3.8.0-py3-none-any.whl.metadata (29 kB)
+#8 8.254 Collecting cloudpickle>=3.0 (from joblib==1.6.0->-r requirements.txt (line 4))
+#8 8.410   Downloading cloudpickle-3.1.3-py3-none-any.whl.metadata (7.1 kB)
+#8 8.588 Collecting iniconfig>=1.0.1 (from pytest==9.1.1->-r requirements.txt (line 5))
+#8 8.741   Downloading iniconfig-2.3.1-py3-none-any.whl.metadata (2.8 kB)
+#8 8.745 Requirement already satisfied: packaging>=22 in /usr/local/lib/python3.11/site-packages (from pytest==9.1.1->-r requirements.txt (line 5)) (26.3)
+#8 8.928 Collecting pluggy<2,>=1.5 (from pytest==9.1.1->-r requirements.txt (line 5))
+#8 9.086   Downloading pluggy-1.7.0-py3-none-any.whl.metadata (5.0 kB)
+#8 9.269 Collecting pygments>=2.7.2 (from pytest==9.1.1->-r requirements.txt (line 5))
+#8 9.425   Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+#8 9.620 Collecting tzdata (from python-dateutil>=2.8.2->pandas==3.0.5->-r requirements.txt (line 1))
+#8 9.773   Downloading tzdata-2026.6-py2.py3-none-any.whl.metadata (1.4 kB)
+#8 9.960 Downloading pandas-3.0.5-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (11.3 MB)
+#8 11.16    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.3/11.3 MB 17.7 MB/s eta 0:00:00
+#8 11.32 Downloading numpy-2.4.6-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.9 MB)
+#8 13.30    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.9/16.9 MB 7.7 MB/s eta 0:00:00
+#8 13.46 Downloading scikit_learn-1.9.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (9.3 MB)
+#8 13.72    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.3/9.3 MB 36.5 MB/s eta 0:00:00
+#8 13.87 Downloading joblib-1.6.0-py3-none-any.whl (306 kB)
+#8 13.88    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 306.1/306.1 kB 56.6 MB/s eta 0:00:00
+#8 14.04 Downloading pytest-9.1.1-py3-none-any.whl (386 kB)
+#8 14.06    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 386.5/386.5 kB 25.9 MB/s eta 0:00:00
+#8 14.21 Downloading cloudpickle-3.1.3-py3-none-any.whl (22 kB)
+#8 14.36 Downloading iniconfig-2.3.1-py3-none-any.whl (7.6 kB)
+#8 14.52 Downloading narwhals-2.29.0-py3-none-any.whl (501 kB)
+#8 14.54    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 501.7/501.7 kB 37.5 MB/s eta 0:00:00
+#8 14.69 Downloading pluggy-1.7.0-py3-none-any.whl (27 kB)
+#8 14.86 Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+#8 14.90    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 33.8 MB/s eta 0:00:00
+#8 15.05 Downloading python_dateutil-4.0.0-py3-none-any.whl (92 kB)
+#8 15.05    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 92.9/92.9 kB 72.8 MB/s eta 0:00:00
+#8 15.21 Downloading scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (35.3 MB)
+#8 16.34    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.3/35.3 MB 294.9 MB/s eta 0:00:00
+#8 16.49 Downloading threadpoolctl-3.8.0-py3-none-any.whl (32 kB)
+#8 16.65 Downloading tzdata-2026.6-py2.py3-none-any.whl (348 kB)
+#8 16.66    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 348.2/348.2 kB 55.7 MB/s eta 0:00:00
+#8 16.93 Installing collected packages: tzdata, threadpoolctl, pygments, pluggy, numpy, narwhals, iniconfig, cloudpickle, scipy, python-dateutil, pytest, joblib, scikit-learn, pandas
+#8 31.44 Successfully installed cloudpickle-3.1.3 iniconfig-2.3.1 joblib-1.6.0 narwhals-2.29.0 numpy-2.4.6 pandas-3.0.5 pluggy-1.7.0 pygments-2.21.0 pytest-9.1.1 python-dateutil-4.0.0 scikit-learn-1.9.0 scipy-1.17.1 threadpoolctl-3.8.0 tzdata-2026.6
+#8 31.44 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#8 32.13 
+#8 32.13 [notice] A new release of pip is available: 24.0 -> 26.3
+#8 32.13 [notice] To update, run: pip install --upgrade pip
+#8 DONE 33.2s
+
+#9 [5/6] COPY pipeline.py predict.py train.py ./
+#9 DONE 0.2s
+
+#10 [6/6] RUN mkdir -p /app/data /app/models /app/outputs
+#10 DONE 0.4s
+
+#11 exporting to image
+#11 exporting layers
+#11 exporting layers 10.2s done
+#11 writing image sha256:a87307f5e2a8c87ca6428f79ff37f46e3b9d8545181a7c3dacce2b2fdd8ac318 done
+#11 naming to docker.io/library/retrasos-vuelos:fase2 done
+#11 DONE 10.2s
+exit=0
