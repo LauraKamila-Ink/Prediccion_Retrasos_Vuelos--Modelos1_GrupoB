@@ -22,9 +22,9 @@ El problema se aborda como un problema de **regresión supervisada**.
 | Fase | Contenido         | Estado |
 | ---- | ----------------- | ------ |
 | 1    | Modelo predictivo | Completada (entrega 1) |
-| 2    | Scripts y Docker  | Parte 1 y Parte 2 completadas |
-| 3    | API REST          | Pendiente |
-| 4    | Monitoreo         | Pendiente |
+| 2    | Scripts y Docker  | Completada (entrega 2) |
+| 3    | API REST          | API, pruebas, cliente y README completos; Docker pendiente — ver [`fase-3/README.md`](fase-3/README.md) |
+| 4    | Monitoreo         | Registro, script, reporte y política completos — ver [`fase-4/README.md`](fase-4/README.md) |
 
 **Entregables de Fase 2:**
 
@@ -87,6 +87,7 @@ python -m venv .venv
 # 2. Instalar dependencias
 pip install -r requirements.txt           # fase 1: notebook (incluye Jupyter)
 pip install -r fase-2/requirements.txt    # fase 2: solo dependencias de los scripts
+pip install -r fase-3/requirements.txt    # fases 3 y 4: API (incluye las de fase 2)
 ```
 
 ---
@@ -344,6 +345,38 @@ docker run --rm `
 ```
 
 En ambos comandos la imagen usa `ENTRYPOINT ["python"]`: el nombre del script (`predict.py` o `train.py`) se pasa como argumento después de la imagen. La salida de predicción y los artefactos de entrenamiento persisten en las carpetas montadas del anfitrión.
+
+---
+
+## Fases 3 y 4 — API REST y monitoreo
+
+* **Fase 3** ([`fase-3/README.md`](fase-3/README.md)): API FastAPI con `GET /health`, `POST /predict` y `POST /train`, que reutiliza `predict.py`, `train.py` y el pipeline guardado de la fase 2. Incluye el cliente de prueba `cliente_prueba.py` y 20 pruebas con `pytest`.
+* **Fase 4** ([`fase-4/README.md`](fase-4/README.md)): registro CSV de cada solicitud a `/predict`, el script `reporte.py` (total y % de fallos), el reporte de la ejecución, las versiones activa y de respaldo y la política de reentrenamiento.
+
+```powershell
+cd fase-3
+uvicorn api:app --host 0.0.0.0 --port 8000     # en otra terminal: python cliente_prueba.py
+```
+
+### Trazabilidad de versiones
+
+Cada versión de `fase-2/models/` relaciona el modelo con sus métricas, su entorno y el commit del código que la produjo (en `metadata.json`, campo `codigo.commit`; desde esta entrega, `train.py` lo registra automáticamente).
+
+| Versión | Uso en la API | Partición | Semilla | Faltantes inducidos | MAE test (baseline) | Entorno | Commit |
+| ------- | ------------- | --------- | ------: | ------------------: | ------------------: | ------- | ------ |
+| v1 | Activa (`MODEL_VERSION=v1`) | aleatoria | 42 | 1 % | 29.12 (24.56) | Python 3.13.7, scikit-learn 1.9.0 | `d934afb` |
+| v2 | Respaldo / rollback | por fecha | 42 | 1 % | 27.81 (23.85) | Python 3.13.7, scikit-learn 1.9.0 | `d934afb` |
+| v3 | Candidata (creada con `POST /train`) | aleatoria | 42 | 0 % | 29.08 (24.56) | Python 3.13.7, scikit-learn 1.9.0 | `b4b1f5a` |
+
+Antes de leer una diferencia de MAE como una mejora hay que comprobar que las versiones comparten partición, datos y faltantes inducidos: v2 evalúa días no vistos (con otro conjunto de prueba) y v3 no tiene el 1 % de faltantes de v1.
+
+### Pruebas
+
+```powershell
+cd fase-2; python -m pytest -q; cd ..    # 15 pruebas
+cd fase-3; python -m pytest -q; cd ..    # 20 pruebas
+cd fase-4; python -m pytest -q; cd ..    # 5 pruebas
+```
 
 ---
 
