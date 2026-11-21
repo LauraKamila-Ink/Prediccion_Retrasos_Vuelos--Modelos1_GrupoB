@@ -54,6 +54,32 @@ En otra terminal, desde `fase-3/`:
 python cliente_prueba.py
 ```
 
+### Iniciar la API con Docker (registro persistente)
+
+Con la imagen de la fase 3 (ver [`fase-3/README.md`](../fase-3/README.md#docker)), desde la raíz
+del repositorio:
+
+```bash
+mkdir -p fase-4/registros
+docker run -d --name api-retrasos -p 8000:8000 --user "$(id -u):$(id -g)" \
+  -e MODEL_VERSION=v1 \
+  -v "$PWD/fase-2/data:/app/fase-2/data:ro" \
+  -v "$PWD/fase-2/models:/app/fase-2/models" \
+  -v "$PWD/fase-4/registros:/app/registros" \
+  retrasos-vuelos:fase3
+python3 fase-3/cliente_prueba.py
+python3 fase-4/reporte.py --registro fase-4/registros/registro_solicitudes.csv
+```
+
+Dentro del contenedor la imagen fija `REQUEST_LOG_PATH=/app/registros/registro_solicitudes.csv`. Con
+el montaje anterior, el registro queda en el anfitrión en
+**`fase-4/registros/registro_solicitudes.csv`** (ignorado por Git) y sobrevive a `docker rm` y a
+cambios de versión. La ejecución con Docker del 20 de noviembre de 2026 dio el mismo resultado que
+el reporte de abajo (3 solicitudes, 33,3 % de fallos):
+[`evidencia/fase-3/04_reporte_registro.txt`](../evidencia/fase-3/04_reporte_registro.txt). La
+persistencia y el rollback a v2 están en
+[`evidencia/fase-3/05_persistencia_rollback.txt`](../evidencia/fase-3/05_persistencia_rollback.txt).
+
 ### Calcular las métricas
 
 Desde la raíz del repositorio:
@@ -129,6 +155,16 @@ copiar ni borrar archivos:
 ```powershell
 $env:MODEL_VERSION = "v2"   # o "v1" para volver
 uvicorn api:app --host 0.0.0.0 --port 8000
+```
+
+Con Docker, se recrea el contenedor con la otra versión (los montajes no cambian):
+
+```bash
+docker rm -f api-retrasos
+docker run -d --name api-retrasos -p 8000:8000 --user "$(id -u):$(id -g)" -e MODEL_VERSION=v2 \
+  -v "$PWD/fase-2/data:/app/fase-2/data:ro" -v "$PWD/fase-2/models:/app/fase-2/models" \
+  -v "$PWD/fase-4/registros:/app/registros" retrasos-vuelos:fase3
+curl -s http://localhost:8000/health   # "version_configurada":"v2"
 ```
 
 > **Las métricas de la tabla no se comparan directamente.** v1 y v2 difieren en la partición:

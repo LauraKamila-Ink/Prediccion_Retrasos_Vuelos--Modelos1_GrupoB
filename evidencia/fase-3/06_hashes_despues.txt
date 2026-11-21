@@ -1,0 +1,5 @@
+$ sha256sum fase-2/models/v*/modelo.joblib   # después
+113ecf13f5d4a7dc25081b347fc24170509ab12938949e937c9bb4e14a6c3fd5  fase-2/models/v1/modelo.joblib
+556435e617a7c5961597cc9dcbeffab84131f525a6518cf575512658c7b1d6fd  fase-2/models/v2/modelo.joblib
+ccdd11ca512d77004416f3364c7b886b896e3b851e1cd26f089019e9d6e55ea3  fase-2/models/v3/modelo.joblib
+3c6ae5c72d25b6ca1356050971f1a8c455b4ea3b0bea6106a122d3eb89ddc7de  fase-2/models/v4/modelo.joblib

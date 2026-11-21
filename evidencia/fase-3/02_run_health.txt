@@ -1,0 +1,7 @@
+$ docker run -d --name api-retrasos -p 8000:8000 --user "$(id -u):$(id -g)" -e MODEL_VERSION=v1 -v "$PWD/fase-2/data:/app/fase-2/data:ro" -v "$PWD/fase-2/models:/app/fase-2/models" -v "$PWD/fase-4/registros:/app/registros" retrasos-vuelos:fase3
+bf718377aaf0f46b84bda775d8cba6acadff22a1c28caa6c71eff96d37fc30be
+$ docker ps --filter name=api-retrasos
+NAMES          IMAGE                   STATUS         PORTS
+api-retrasos   retrasos-vuelos:fase3   Up 3 seconds   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+$ curl -s http://localhost:8000/health
+{"estado":"en ejecución","version_configurada":"v1","modelo_disponible":true}

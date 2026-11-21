@@ -186,5 +186,95 @@ Resultado actual: **20 pruebas satisfactorias**.
 
 ## Docker
 
-> **Pendiente.** El `Dockerfile` de la fase 3 y la evidencia de construcción y ejecución se
-> agregan en la rama `feature/fase3-docker`.
+`fase-3/Dockerfile` empaqueta la API sobre `python:3.11-slim`. Dentro de la imagen se conserva la
+estructura del repositorio (`/app/fase-2`, `/app/fase-3`, `/app/fase-4`), porque `api.py` importa de
+`../fase-2` y `../fase-4`. Los datos, los modelos y el registro **no** se copian a la imagen
+(`fase-3/Dockerfile.dockerignore` los excluye): llegan por montaje, igual que en la fase 2.
+
+### Construir la imagen
+
+Desde la **raíz del repositorio** (el contexto de construcción es `.`):
+
+```bash
+docker build -f fase-3/Dockerfile --build-arg GIT_COMMIT="$(git rev-parse HEAD)" \
+  -t retrasos-vuelos:fase3 .
+```
+
+`GIT_COMMIT` queda como variable de entorno de la imagen: dentro del contenedor no hay `.git`, así
+que `train.py` guarda ese valor en `metadata.json` (`codigo.commit`) cuando se llama a `/train`.
+
+### Iniciar el contenedor
+
+```bash
+mkdir -p fase-4/registros
+docker run -d --name api-retrasos -p 8000:8000 --user "$(id -u):$(id -g)" \
+  -e MODEL_VERSION=v1 \
+  -v "$PWD/fase-2/data:/app/fase-2/data:ro" \
+  -v "$PWD/fase-2/models:/app/fase-2/models" \
+  -v "$PWD/fase-4/registros:/app/registros" \
+  retrasos-vuelos:fase3
+```
+
+| Elemento | Valor | Para qué |
+| -------- | ----- | -------- |
+| Puerto | `-p 8000:8000` | uvicorn escucha en `0.0.0.0:8000` dentro del contenedor; la API queda en `http://localhost:8000`. |
+| Datos | `fase-2/data` → `/app/fase-2/data` (**solo lectura**) | CSV de entrenamiento de `/train` (`flight_data_2024_sample.csv`). |
+| Modelos | `fase-2/models` → `/app/fase-2/models` (**escritura**) | `/predict` lee `MODEL_VERSION`; `/train` guarda la versión nueva en el anfitrión. |
+| Registro | `fase-4/registros` → `/app/registros` (**escritura**) | Registro de la fase 4 (`REQUEST_LOG_PATH=/app/registros/registro_solicitudes.csv`), persiste entre contenedores. |
+| Usuario | `--user "$(id -u):$(id -g)"` | Los archivos nuevos (versiones y registro) quedan a nombre del usuario del anfitrión, no de root. |
+| Versión | `-e MODEL_VERSION=v1` | Versión activa. Rollback: recrear el contenedor con `-e MODEL_VERSION=v2`. |
+
+### Probar
+
+```bash
+curl -s http://localhost:8000/health
+python3 fase-3/cliente_prueba.py --train
+python3 fase-4/reporte.py --registro fase-4/registros/registro_solicitudes.csv
+docker logs api-retrasos
+docker rm -f api-retrasos
+```
+
+Salida real de la ejecución del 20 de noviembre de 2026 (extracto de
+[`evidencia/fase-3/03_cliente_train.txt`](../evidencia/fase-3/03_cliente_train.txt)):
+
+```text
+### Estado del servicio
+GET http://localhost:8000/health
+HTTP 200: {"estado": "en ejecución", "version_configurada": "v1", "modelo_disponible": true}
+
+### Predicción válida 1
+POST http://localhost:8000/predict
+Solicitud: {"op_unique_carrier": "MQ", "origin": "DFW", "dest": "RAP", "crs_dep_time": 1018, "crs_arr_time": 1149, "crs_elapsed_time": 151.0, "distance": 835.0, "month": 4, "day_of_week": 4}
+HTTP 200: {"prediccion": -1.3319572571481464, "version": "v1"}
+
+### Predicción inválida (falta distance)
+HTTP 422: {"detail": "Faltan variables predictoras obligatorias: ['distance']"}
+
+### Entrenamiento
+POST http://localhost:8000/train
+HTTP 201: {"version": "v4", "directorio": "fase-2/models/v4", "metricas_test": {"modelo": {"mae": 29.078879673101284, ...}, "baseline": {"mae": 24.5614837398374, ...}}, "version_activa": "v1"}
+```
+
+`/train` creó `fase-2/models/v4/` en el anfitrión, con `codigo.commit` igual al `GIT_COMMIT` de la
+imagen y `arbol_limpio: null`. Los SHA-256 de v1, v2 y v3 no cambiaron. Las métricas de v4
+coinciden con las de v3 (misma configuración de `/train`); la única diferencia es el último dígito
+de coma flotante del MAE de entrenamiento (`26.755497376331` frente a `26.755497376331007`), porque
+v3 se entrenó con Python 3.13.7 y v4 con Python 3.11.18 dentro de la imagen. v4 se eliminó después de guardar la evidencia, porque v3 sigue siendo la candidata
+documentada; su `metadata.json` y su `metrics.json` quedan en
+[`evidencia/fase-3/`](../evidencia/fase-3/).
+
+### Pruebas dentro de la imagen
+
+Las pruebas no se copian a la imagen, pero pueden ejecutarse con ella montando el repositorio en
+solo lectura (útil si en el anfitrión no hay un entorno virtual):
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo:ro" -w /repo/fase-3 \
+  retrasos-vuelos:fase3 python -m pytest -p no:cacheprovider
+```
+
+Resultado: 15, 20 y 5 pruebas satisfactorias en `fase-2`, `fase-3` y `fase-4`
+([`evidencia/fase-3/08_pytest.txt`](../evidencia/fase-3/08_pytest.txt)).
+
+La evidencia completa (build, run, cliente, `/train`, reporte, persistencia, rollback a v2, el 503 de
+una versión inexistente y los hashes) está en [`evidencia/`](../evidencia/README.md).
