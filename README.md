@@ -23,8 +23,8 @@ El problema se aborda como un problema de **regresión supervisada**.
 | ---- | ----------------- | ------ |
 | 1    | Modelo predictivo | Completada (entrega 1) |
 | 2    | Scripts y Docker  | Completada (entrega 2) |
-| 3    | API REST          | API, pruebas, cliente y README completos; Docker pendiente — ver [`fase-3/README.md`](fase-3/README.md) |
-| 4    | Monitoreo         | Registro, script, reporte y política completos — ver [`fase-4/README.md`](fase-4/README.md) |
+| 3    | API REST          | Completada: API, pruebas, cliente, Docker y evidencia — ver [`fase-3/README.md`](fase-3/README.md) y [`evidencia/`](evidencia/README.md) |
+| 4    | Monitoreo         | Completada: registro (persistente en Docker), script, reporte y política — ver [`fase-4/README.md`](fase-4/README.md) |
 
 **Entregables de Fase 2:**
 
@@ -65,7 +65,7 @@ Los resultados aplican únicamente a **vuelos con llegada observada**: los vuelo
 ## Requisitos
 
 * **Python 3.11 o superior**. La imagen Docker usa `python:3.11-slim`; las pruebas locales se validaron con Python 3.11.9.
-* Los artefactos v1 y v2 existentes registran Python 3.13.7 en sus metadatos. La carga de los modelos y la inferencia también se validaron con Python 3.11.9.
+* Los artefactos v1 y v2 existentes registran Python 3.13.7 en sus metadatos. La carga de los modelos y la inferencia también se validaron con Python 3.11.9 y, dentro de las imágenes Docker, con Python 3.11.18 ([`evidencia/`](evidencia/README.md)).
 * Entorno virtual. No instalar paquetes de forma global.
 * Cuenta de Kaggle para descargar los datos.
 
@@ -346,6 +346,27 @@ docker run --rm `
 
 En ambos comandos la imagen usa `ENTRYPOINT ["python"]`: el nombre del script (`predict.py` o `train.py`) se pasa como argumento después de la imagen. La salida de predicción y los artefactos de entrenamiento persisten en las carpetas montadas del anfitrión.
 
+#### Los mismos comandos en bash (Linux / macOS)
+
+Desde `fase-2/`. `--user` hace que los archivos creados queden a nombre del usuario del anfitrión y `GIT_COMMIT` permite que `train.py` registre el commit en `metadata.json`, porque dentro del contenedor no hay `.git`:
+
+```bash
+docker build -t retrasos-vuelos:fase2 .
+mkdir -p outputs
+
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "$PWD/data:/app/data:ro" -v "$PWD/models:/app/models:ro" -v "$PWD/outputs:/app/outputs" \
+  retrasos-vuelos:fase2 \
+  predict.py --data data/prediccion.csv --version v2 --output outputs/predicciones.csv
+
+docker run --rm --user "$(id -u):$(id -g)" -e GIT_COMMIT="$(git rev-parse HEAD)" \
+  -v "$PWD/data:/app/data:ro" -v "$PWD/models:/app/models" \
+  retrasos-vuelos:fase2 \
+  train.py --data data/flight_data_2024_sample.csv --version v-docker --particion fecha
+```
+
+El recorrido completo desde un clon limpio (build, entrenamiento con un identificador nuevo, predicción con el artefacto generado y rechazo de un identificador repetido sin reemplazar la versión) está en [`evidencia/`](evidencia/README.md), sección `fase-2/`.
+
 ---
 
 ## Fases 3 y 4 — API REST y monitoreo
@@ -356,6 +377,18 @@ En ambos comandos la imagen usa `ENTRYPOINT ["python"]`: el nombre del script (`
 ```powershell
 cd fase-3
 uvicorn api:app --host 0.0.0.0 --port 8000     # en otra terminal: python cliente_prueba.py
+```
+
+Con Docker, desde la raíz del repositorio (detalle de los montajes en [`fase-3/README.md`](fase-3/README.md#docker)):
+
+```bash
+docker build -f fase-3/Dockerfile --build-arg GIT_COMMIT="$(git rev-parse HEAD)" -t retrasos-vuelos:fase3 .
+mkdir -p fase-4/registros
+docker run -d --name api-retrasos -p 8000:8000 --user "$(id -u):$(id -g)" -e MODEL_VERSION=v1 \
+  -v "$PWD/fase-2/data:/app/fase-2/data:ro" -v "$PWD/fase-2/models:/app/fase-2/models" \
+  -v "$PWD/fase-4/registros:/app/registros" retrasos-vuelos:fase3
+python3 fase-3/cliente_prueba.py --train
+python3 fase-4/reporte.py --registro fase-4/registros/registro_solicitudes.csv
 ```
 
 ### Trazabilidad de versiones
@@ -386,5 +419,6 @@ cd fase-4; python -m pytest -q; cd ..    # 5 pruebas
 ├── fase-1/          Modelo predictivo (notebook y validación del dataset)
 ├── fase-2/          Scripts y Docker
 ├── fase-3/          API REST
-└── fase-4/          Monitoreo
+├── fase-4/          Monitoreo
+└── evidencia/       Salidas reales de Docker (build, run, train, predict, registro, rollback)
 ```
