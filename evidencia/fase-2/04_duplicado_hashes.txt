@@ -1,0 +1,12 @@
+$ sha256sum models/v-evidencia/modelo.joblib   # antes de repetir
+11bf31a50d84c68268dde8057316842cd446fdbf2d7e72d83eefa9e6c2da3d7f  models/v-evidencia/modelo.joblib
+$ docker run --rm --user "$(id -u):$(id -g)" -e GIT_COMMIT="$(git rev-parse HEAD)" -v "$PWD/data:/app/data:ro" -v "$PWD/models:/app/models" retrasos-vuelos:fase2 train.py --data data/flight_data_2024_sample.csv --version v-evidencia --particion fecha   # mismo identificador
+Error: la versión 'v-evidencia' ya existe en models/v-evidencia. Use otra versión o --sobrescribir.
+exit=1
+$ sha256sum models/v-evidencia/modelo.joblib   # después de repetir
+11bf31a50d84c68268dde8057316842cd446fdbf2d7e72d83eefa9e6c2da3d7f  models/v-evidencia/modelo.joblib
+$ sha256sum models/v*/modelo.joblib
+113ecf13f5d4a7dc25081b347fc24170509ab12938949e937c9bb4e14a6c3fd5  models/v1/modelo.joblib
+556435e617a7c5961597cc9dcbeffab84131f525a6518cf575512658c7b1d6fd  models/v2/modelo.joblib
+ccdd11ca512d77004416f3364c7b886b896e3b851e1cd26f089019e9d6e55ea3  models/v3/modelo.joblib
+11bf31a50d84c68268dde8057316842cd446fdbf2d7e72d83eefa9e6c2da3d7f  models/v-evidencia/modelo.joblib

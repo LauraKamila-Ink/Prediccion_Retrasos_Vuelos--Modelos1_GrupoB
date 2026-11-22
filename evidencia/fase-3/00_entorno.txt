@@ -1,0 +1,44 @@
+$ date -Iseconds
+2026-11-20T22:45:41-05:00
+$ git rev-parse HEAD
+f4570a4fb646a8c069fa93499d2691f02f44af07
+$ git status --short
+?? evidencia/
+$ uname -a
+Linux araigumadev-pc-vb 7.0.0-38-generic #38~24.04.4-Ubuntu SMP PREEMPT_DYNAMIC Mon Sep 14 16:37:11 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+$ grep PRETTY_NAME /etc/os-release
+PRETTY_NAME="Ubuntu 24.04.5 LTS"
+$ docker version
+Client: Docker Engine - Community
+ Version:           29.10.0
+ API version:       1.57
+ Go version:        go1.27.4
+ Git commit:        fdd4b8e
+ Built:             Mon Nov 16 11:00:49 2026
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server: Docker Engine - Community
+ Engine:
+  Version:          29.10.0
+  API version:      1.57 (minimum version 1.40)
+  Go version:       go1.27.4
+  Git commit:       06db173
+  Built:            Mon Nov 16 11:01:38 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.4.2
+  GitCommit:        b7a25261e029d68978bbf290df0a62fc819b3c51
+ runc:
+  Version:          1.5.3
+  GitCommit:        v1.5.3-0-g46365c62
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+$ sha256sum fase-2/data/flight_data_2024_sample.csv
+3474b0573b40c922e97ae270b7ec6a9ab296ebd8d87767696d9cb7a030856264  fase-2/data/flight_data_2024_sample.csv
+$ sha256sum fase-2/models/v*/modelo.joblib   # antes
+113ecf13f5d4a7dc25081b347fc24170509ab12938949e937c9bb4e14a6c3fd5  fase-2/models/v1/modelo.joblib
+556435e617a7c5961597cc9dcbeffab84131f525a6518cf575512658c7b1d6fd  fase-2/models/v2/modelo.joblib
+ccdd11ca512d77004416f3364c7b886b896e3b851e1cd26f089019e9d6e55ea3  fase-2/models/v3/modelo.joblib

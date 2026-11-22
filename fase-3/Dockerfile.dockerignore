@@ -1,0 +1,28 @@
+# BuildKit usa este archivo automáticamente con: docker build -f fase-3/Dockerfile .
+# Los datos y los modelos llegan por montaje, no dentro de la imagen.
+.git/
+.gitignore
+.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/*.pyc
+**/.ipynb_checkpoints/
+**/data/
+**/models/
+**/outputs/
+**/registros/
+**/*.csv
+**/*.joblib
+**/tests/
+fase-1/
+evidencia/
+**/*.pdf
+**/*.md
+.env
+.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/credentials*
+**/.aws/
+**/.kaggle/

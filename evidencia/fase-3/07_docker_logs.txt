@@ -1,0 +1,27 @@
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     172.17.0.1:59918 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.17.0.1:59924 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.17.0.1:59930 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.17.0.1:59940 - "POST /predict HTTP/1.1" 200 OK
+INFO:     172.17.0.1:59950 - "POST /predict HTTP/1.1" 200 OK
+INFO:     172.17.0.1:59964 - "POST /predict HTTP/1.1" 422 Unprocessable Entity
+Filas leídas: 10,000  |  filas con objetivo: 9,836
+Partición 'aleatoria': train 7,868 filas, test 1,968 filas
+
+=== Métricas ===
+            conjunto       MAE      RMSE        R2
+baseline       train     24.20     58.75   -0.0557
+baseline        test     24.56     51.75   -0.0761
+modelo         train     26.76     54.69    0.0855
+modelo          test     29.08     50.82   -0.0380
+
+Mejora MAE en test frente al baseline:  -18.39 %
+Mejora RMSE en test frente al baseline: +1.78 %
+
+Días en entrenamiento: 366  |  días en prueba: 362  |  días de prueba también en entrenamiento: 362
+
+Modelo guardado en /app/fase-2/models/v4: modelo.joblib, metrics.json, metadata.json
+INFO:     172.17.0.1:59974 - "POST /train HTTP/1.1" 201 Created

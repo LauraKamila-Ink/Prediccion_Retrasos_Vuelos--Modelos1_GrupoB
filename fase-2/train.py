@@ -14,12 +14,15 @@ Uso (desde fase-2/):
 import argparse
 import hashlib
 import json
+import os
 import platform
 import re
+import subprocess
 import sys
 import warnings
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import joblib
 import numpy as np
@@ -238,6 +241,29 @@ def hash_codigo():
     return sha.hexdigest()
 
 
+def info_git():
+    """
+    Commit del código con que se entrenó, para relacionar cada versión con su
+    código. Dentro de Docker no hay carpeta .git: se usa la variable GIT_COMMIT
+    (pasada al construir la imagen) y, si tampoco existe, queda en None.
+    arbol_limpio=False indica cambios sin confirmar: el commit no basta para
+    reproducir el código exacto.
+    """
+    directorio = Path(__file__).resolve().parent
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=directorio, capture_output=True,
+            text=True, check=True, timeout=10,
+        ).stdout.strip()
+        cambios = subprocess.run(
+            ["git", "status", "--porcelain", "--", "."], cwd=directorio,
+            capture_output=True, text=True, check=True, timeout=10,
+        ).stdout.strip()
+        return {"commit": commit, "arbol_limpio": not cambios}
+    except (OSError, subprocess.SubprocessError):
+        return {"commit": os.getenv("GIT_COMMIT") or None, "arbol_limpio": None}
+
+
 def construir_metadata(args, df, df_modelar, X_train, X_test, dias):
     return {
         "version": args.version,
@@ -259,7 +285,7 @@ def construir_metadata(args, df, df_modelar, X_train, X_test, dias):
             "month": "numerica",
             "day_of_week": "numerica",
         },
-        "codigo": {"sha256": hash_codigo()},
+        "codigo": {**info_git(), "sha256": hash_codigo()},
         "particion": {
             "tipo": args.particion,
             "justificacion": JUSTIFICACION_PARTICION[args.particion],
@@ -311,40 +337,63 @@ def guardar_artefactos(directorio, modelo, metricas, metadata):
             archivo.write("\n")
 
 
-def main(argv=None):
-    args = parsear_argumentos(argv)
+def entrenar_version(
+    data,
+    version,
+    modelos_dir="models",
+    objetivo=OBJETIVO_POR_DEFECTO,
+    particion="aleatoria",
+    test_size=0.2,
+    random_state=RANDOM_STATE,
+    fraccion_faltantes=0.0,
+    sobrescribir=False,
+):
+    """
+    Entrena, evalúa y guarda una versión en <modelos_dir>/<version>/.
+
+    Es la función que reutilizan la CLI y la API de la fase 3. Lanza excepciones en
+    lugar de terminar el proceso: FileExistsError si la versión ya existe,
+    FileNotFoundError si faltan los datos y ValueError si los datos no son válidos.
+    Devuelve (directorio_version, metricas, metadata).
+    """
+    config = SimpleNamespace(
+        data=str(data), version=version, objetivo=objetivo, particion=particion,
+        test_size=test_size, random_state=random_state,
+        fraccion_faltantes=fraccion_faltantes,
+    )
 
     # Se comprueba antes de entrenar: una versión publicada no debe cambiar en
     # silencio, porque sus métricas y metadatos dejarían de corresponder
-    directorio_version = Path(args.modelos_dir) / args.version
-    if directorio_version.exists() and not args.sobrescribir:
-        sys.exit(f"Error: la versión '{args.version}' ya existe en {directorio_version}. "
-                 f"Use otra versión o --sobrescribir.")
+    directorio_version = Path(modelos_dir) / version
+    if directorio_version.exists() and not sobrescribir:
+        raise FileExistsError(
+            f"la versión '{version}' ya existe en {directorio_version}. "
+            f"Use otra versión o --sobrescribir."
+        )
 
-    if not Path(args.data).is_file():
-        sys.exit(f"Error: no se encontró el archivo de datos '{args.data}'. "
-                 f"Descárguelo de Kaggle y ubíquelo en fase-2/data/ (ver README).")
+    if not Path(data).is_file():
+        raise FileNotFoundError(
+            f"no se encontró el archivo de datos '{data}'. "
+            f"Descárguelo de Kaggle y ubíquelo en fase-2/data/ (ver README)."
+        )
 
-    df = pd.read_csv(args.data)
-    try:
-        validar_columnas(df, PREDICTORAS)
-        validar_objetivo(df, args.objetivo)
-        if args.particion == "fecha":
-            validar_columnas(df, [COLUMNA_FECHA])
-    except ValueError as error:
-        sys.exit(f"Error: {error}")
+    df = pd.read_csv(data)
+    validar_columnas(df, PREDICTORAS)
+    validar_objetivo(df, objetivo)
+    if particion == "fecha":
+        validar_columnas(df, [COLUMNA_FECHA])
 
-    df = inducir_faltantes(df, args.fraccion_faltantes, args.random_state)
+    df = inducir_faltantes(df, fraccion_faltantes, random_state)
 
     # Los vuelos cancelados o desviados no tienen llegada observada: no se imputa
     # el objetivo, se descartan (el modelo solo aplica a vuelos que aterrizan)
-    df_modelar = df.dropna(subset=[args.objetivo])
+    df_modelar = df.dropna(subset=[objetivo])
     print(f"Filas leídas: {len(df):,}  |  filas con objetivo: {len(df_modelar):,}")
 
     X_train, X_test, y_train, y_test = particionar(
-        df_modelar, args.objetivo, args.particion, args.test_size, args.random_state
+        df_modelar, objetivo, particion, test_size, random_state
     )
-    print(f"Partición '{args.particion}': train {len(X_train):,} filas, "
+    print(f"Partición '{particion}': train {len(X_train):,} filas, "
           f"test {len(X_test):,} filas")
 
     # Referencia mínima: la mediana del entrenamiento es el predictor constante
@@ -366,10 +415,29 @@ def main(argv=None):
     dias = resumir_dias(df_modelar, X_train, X_test)
     imprimir_metricas(metricas, dias)
 
-    metadata = construir_metadata(args, df, df_modelar, X_train, X_test, dias)
+    metadata = construir_metadata(config, df, df_modelar, X_train, X_test, dias)
     guardar_artefactos(directorio_version, modelo, metricas, metadata)
     print(f"\nModelo guardado en {directorio_version}: "
           f"modelo.joblib, metrics.json, metadata.json")
+    return directorio_version, metricas, metadata
+
+
+def main(argv=None):
+    args = parsear_argumentos(argv)
+    try:
+        entrenar_version(
+            data=args.data,
+            version=args.version,
+            modelos_dir=args.modelos_dir,
+            objetivo=args.objetivo,
+            particion=args.particion,
+            test_size=args.test_size,
+            random_state=args.random_state,
+            fraccion_faltantes=args.fraccion_faltantes,
+            sobrescribir=args.sobrescribir,
+        )
+    except (FileExistsError, FileNotFoundError, ValueError) as error:
+        sys.exit(f"Error: {error}")
 
 
 if __name__ == "__main__":
