@@ -202,7 +202,11 @@ fase-2/
     │   ├── modelo.joblib
     │   ├── metrics.json
     │   └── metadata.json
-    └── v2/              <- partición por fecha
+    ├── v2/              <- partición por fecha
+    │   ├── modelo.joblib
+    │   ├── metrics.json
+    │   └── metadata.json
+    └── v3/              <- candidata creada por POST /train (fase 3)
         ├── modelo.joblib
         ├── metrics.json
         └── metadata.json
@@ -373,6 +377,18 @@ El recorrido completo desde un clon limpio (build, entrenamiento con un identifi
 
 * **Fase 3** ([`fase-3/README.md`](fase-3/README.md)): API FastAPI con `GET /health`, `POST /predict` y `POST /train`, que reutiliza `predict.py`, `train.py` y el pipeline guardado de la fase 2. Incluye el cliente de prueba `cliente_prueba.py` y 20 pruebas con `pytest`.
 * **Fase 4** ([`fase-4/README.md`](fase-4/README.md)): registro CSV de cada solicitud a `/predict`, el script `reporte.py` (total y % de fallos), el reporte de la ejecución, las versiones activa y de respaldo y la política de reentrenamiento.
+
+### Contrato y operación
+
+| Operación | Resultado |
+| --------- | --------- |
+| `GET /health` | Informa el estado del servicio, la versión configurada y si el artefacto del modelo está disponible. |
+| `POST /predict` | Recibe únicamente las nueve predictoras pre-vuelo, sin `arr_delay`; devuelve `prediccion` y `version`. Rechaza entradas inválidas con HTTP 422 y una versión no disponible con HTTP 503. |
+| `POST /train` | Entrena y guarda la siguiente versión (`v<N>`) con HTTP 201. Conserva los modelos existentes y no activa automáticamente la versión nueva. |
+
+`MODEL_VERSION` selecciona el modelo de inferencia (por defecto, `v1`); `GET /health` permite comprobar la selección. Para volver a una versión anterior, se reinicia la API con `MODEL_VERSION=v2`. En Docker, los modelos y el CSV de monitoreo se conservan en los volúmenes montados.
+
+El registro agrega una fila por cada intento a `/predict`, incluso si la solicitud se rechaza, con fecha/hora, estado HTTP, versión y predicción. `fase-4/reporte.py` cuenta como fallidas las respuestas 4xx/5xx; en el ensayo documentado hubo 3 solicitudes y 33,3 % de fallos (dos predicciones válidas y un rechazo esperado por falta de un campo).
 
 ```powershell
 cd fase-3
