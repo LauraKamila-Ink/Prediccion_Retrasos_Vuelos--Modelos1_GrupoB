@@ -1,0 +1,15 @@
+$ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/data:/app/data:ro" -v "$PWD/models:/app/models:ro" -v "$PWD/outputs:/app/outputs" retrasos-vuelos:fase2 predict.py --data data/prediccion.csv --version v-evidencia --output outputs/predicciones.csv
+Predicciones guardadas en outputs/predicciones.csv (10 filas).
+exit=0
+$ cat outputs/predicciones.csv
+op_unique_carrier,origin,dest,crs_dep_time,crs_arr_time,crs_elapsed_time,distance,month,day_of_week,prediccion_arr_delay
+MQ,DFW,RAP,1018,1149,151.0,835.0,4,4,-0.7580066736706357
+AA,CLT,PHX,1637,1923,286.0,1773.0,1,1,21.640507610955
+9E,CHA,ATL,1000,1059,59.0,106.0,12,4,-12.682861293915462
+WN,OMA,LAS,1330,1430,180.0,1099.0,4,1,19.590357222100497
+WN,BWI,MYR,1340,1510,90.0,399.0,2,5,5.184958399024584
+WN,SAN,PHX,715,830,75.0,304.0,4,1,1.8218212530416462
+G4,MLB,ABE,933,1202,149.0,914.0,11,3,-25.61512028624321
+AS,BNA,PDX,1855,2155,300.0,1973.0,8,6,18.333939335897853
+OO,LAX,SJC,820,939,79.0,308.0,4,5,-1.8980538907490754
+OO,SFO,BFL,2235,2350,75.0,238.0,2,4,-3.999789436717517

@@ -1,0 +1,15 @@
+$ git clone --branch feature/fase3-docker <repositorio> clon
+$ git rev-parse HEAD
+f4570a4fb646a8c069fa93499d2691f02f44af07
+$ git status --short   # clon limpio
+$ ls fase-2/data fase-2/models
+fase-2/data:
+prediccion.csv
+
+fase-2/models:
+v1
+v2
+v3
+$ cp <origen>/flight_data_2024_sample.csv fase-2/data/
+$ sha256sum fase-2/data/flight_data_2024_sample.csv
+3474b0573b40c922e97ae270b7ec6a9ab296ebd8d87767696d9cb7a030856264  fase-2/data/flight_data_2024_sample.csv

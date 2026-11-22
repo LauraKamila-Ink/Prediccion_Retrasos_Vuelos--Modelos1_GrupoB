@@ -1,0 +1,23 @@
+$ docker run --rm --user "$(id -u):$(id -g)" -e GIT_COMMIT="$(git rev-parse HEAD)" -v "$PWD/data:/app/data:ro" -v "$PWD/models:/app/models" retrasos-vuelos:fase2 train.py --data data/flight_data_2024_sample.csv --version v-evidencia --particion fecha
+Filas leídas: 10,000  |  filas con objetivo: 9,836
+Partición 'fecha': train 7,832 filas, test 2,004 filas
+
+=== Métricas ===
+            conjunto       MAE      RMSE        R2
+baseline       train     24.38     58.61   -0.0569
+baseline        test     23.85     52.52   -0.0687
+modelo         train     26.93     54.53    0.0849
+modelo          test     27.81     52.27   -0.0586
+
+Mejora MAE en test frente al baseline:  -16.59 %
+Mejora RMSE en test frente al baseline: +0.48 %
+
+Días en entrenamiento: 292  |  días en prueba: 74  |  días de prueba también en entrenamiento: 0
+
+Modelo guardado en models/v-evidencia: modelo.joblib, metrics.json, metadata.json
+exit=0
+$ ls -l models/v-evidencia
+total 28
+-rw-r--r-- 1 araigumadev araigumadev  2382 nov 20 22:50 metadata.json
+-rw-r--r-- 1 araigumadev araigumadev   603 nov 20 22:50 metrics.json
+-rw-r--r-- 1 araigumadev araigumadev 17506 nov 20 22:50 modelo.joblib

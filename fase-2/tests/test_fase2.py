@@ -9,6 +9,7 @@ import pytest
 from pipeline import PREDICTORAS, construir_modelo
 from predict import main as predict_main
 from predict import predecir, validar_datos_entrada
+from train import entrenar_version
 from train import main as train_main
 
 FASE2_DIR = Path(__file__).resolve().parents[1]
@@ -92,6 +93,9 @@ def test_entrenamiento_guarda_modelo_metricas_y_metadatos(modelo_entrenado):
     assert metadata["version"] == "v1"
     assert metadata["objetivo"] == "arr_delay"
     assert metadata["codigo"]["sha256"]
+    # Trazabilidad: cada versión registra el commit del código (None solo si no
+    # hay Git ni GIT_COMMIT, como en una imagen Docker construida sin el argumento)
+    assert {"commit", "arbol_limpio"} <= metadata["codigo"].keys()
     assert metadata["faltantes_inducidos"]["fraccion"] == 0
     assert metadata["datos"]["n_train"] + metadata["datos"]["n_test"] == 30
 
@@ -232,3 +236,30 @@ def test_versionamiento_conserva_versiones_y_rechaza_duplicados(
             ]
         )
     assert ruta_v1.read_bytes() == bytes_v1_antes
+
+
+def test_entrenar_version_reutilizable_guarda_artefactos_y_protege_versiones(
+    tmp_path, datos_csv
+):
+    directorio_modelos = tmp_path / "models"
+    directorio, metricas, metadata = entrenar_version(
+        datos_csv, "v7", modelos_dir=directorio_modelos
+    )
+
+    assert directorio == directorio_modelos / "v7"
+    assert {p.name for p in directorio.iterdir()} == {
+        "modelo.joblib", "metrics.json", "metadata.json"
+    }
+    assert metricas["modelo"]["test"]["mae"] >= 0
+    assert metadata["version"] == "v7"
+
+    bytes_antes = (directorio / "modelo.joblib").read_bytes()
+    with pytest.raises(FileExistsError, match="ya existe"):
+        entrenar_version(datos_csv, "v7", modelos_dir=directorio_modelos)
+    assert (directorio / "modelo.joblib").read_bytes() == bytes_antes
+
+
+def test_entrenar_version_sin_datos_lanza_error_sin_crear_version(tmp_path):
+    with pytest.raises(FileNotFoundError, match="no se encontró"):
+        entrenar_version(tmp_path / "no_existe.csv", "v1", modelos_dir=tmp_path)
+    assert not (tmp_path / "v1").exists()

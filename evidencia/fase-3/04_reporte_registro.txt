@@ -1,0 +1,11 @@
+$ ls -l fase-4/registros/
+total 4
+-rw-r--r-- 1 araigumadev araigumadev 182 nov 20 22:47 registro_solicitudes.csv
+$ python3 fase-4/reporte.py --registro fase-4/registros/registro_solicitudes.csv
+Total de solicitudes: 3
+Porcentaje de solicitudes fallidas: 33,3 %
+$ cat fase-4/registros/registro_solicitudes.csv
+fecha_hora,estado_http,version,prediccion
+2026-11-21T03:47:14+00:00,200,v1,-1.3319572571481464
+2026-11-21T03:47:14+00:00,200,v1,22.36378367328134
+2026-11-21T03:47:14+00:00,422,,

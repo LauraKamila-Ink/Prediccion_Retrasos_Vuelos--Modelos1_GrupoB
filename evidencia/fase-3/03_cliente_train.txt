@@ -1,0 +1,104 @@
+$ python3 fase-3/cliente_prueba.py --train
+
+### Estado del servicio
+GET http://localhost:8000/health
+HTTP 200: {"estado": "en ejecución", "version_configurada": "v1", "modelo_disponible": true}
+
+### Predicción válida 1
+POST http://localhost:8000/predict
+Solicitud: {"op_unique_carrier": "MQ", "origin": "DFW", "dest": "RAP", "crs_dep_time": 1018, "crs_arr_time": 1149, "crs_elapsed_time": 151.0, "distance": 835.0, "month": 4, "day_of_week": 4}
+HTTP 200: {"prediccion": -1.3319572571481464, "version": "v1"}
+
+### Predicción válida 2
+POST http://localhost:8000/predict
+Solicitud: {"op_unique_carrier": "AA", "origin": "CLT", "dest": "PHX", "crs_dep_time": 1637, "crs_arr_time": 1923, "crs_elapsed_time": 286.0, "distance": 1773.0, "month": 1, "day_of_week": 1}
+HTTP 200: {"prediccion": 22.36378367328134, "version": "v1"}
+
+### Predicción inválida (falta distance)
+POST http://localhost:8000/predict
+Solicitud: {"op_unique_carrier": "MQ", "origin": "DFW", "dest": "RAP", "crs_dep_time": 1018, "crs_arr_time": 1149, "crs_elapsed_time": 151.0, "month": 4, "day_of_week": 4}
+HTTP 422: {"detail": "Faltan variables predictoras obligatorias: ['distance']"}
+
+### Entrenamiento
+POST http://localhost:8000/train
+HTTP 201: {"version": "v4", "directorio": "fase-2/models/v4", "metricas_test": {"modelo": {"mae": 29.078879673101284, "rmse": 50.82305572891518, "r2": -0.03803114293766807}, "baseline": {"mae": 24.5614837398374, "rmse": 51.74572858535541, "r2": -0.07606337280398767}}, "version_activa": "v1"}
+$ ls -l fase-2/models/v4
+total 28
+-rw-r--r-- 1 araigumadev araigumadev  2335 nov 20 22:48 metadata.json
+-rw-r--r-- 1 araigumadev araigumadev   602 nov 20 22:48 metrics.json
+-rw-r--r-- 1 araigumadev araigumadev 17570 nov 20 22:48 modelo.joblib
+$ cat fase-2/models/v4/metadata.json
+{
+  "version": "v4",
+  "fecha_entrenamiento": "2026-11-21T03:48:22+00:00",
+  "tipo_problema": "regresion",
+  "algoritmo": "LinearRegression",
+  "parametros_modelo": {
+    "fit_intercept": true
+  },
+  "baseline": "DummyRegressor(strategy='median')",
+  "objetivo": "arr_delay",
+  "predictoras": [
+    "op_unique_carrier",
+    "origin",
+    "dest",
+    "crs_dep_time",
+    "crs_arr_time",
+    "crs_elapsed_time",
+    "distance",
+    "month",
+    "day_of_week"
+  ],
+  "tipos_predictoras": {
+    "op_unique_carrier": "categorica",
+    "origin": "categorica",
+    "dest": "categorica",
+    "crs_dep_time": "numerica",
+    "crs_arr_time": "numerica",
+    "crs_elapsed_time": "numerica",
+    "distance": "numerica",
+    "month": "numerica",
+    "day_of_week": "numerica"
+  },
+  "codigo": {
+    "commit": "f4570a4fb646a8c069fa93499d2691f02f44af07",
+    "arbol_limpio": null,
+    "sha256": "41f8dc5734e399f303fd9edee86a23a0708f4e60c06d360a0c227dc3561269fc"
+  },
+  "particion": {
+    "tipo": "aleatoria",
+    "justificacion": "train_test_split por filas, igual que la fase 1. Los días de prueba también tienen vuelos en entrenamiento, así que las métricas describen vuelos de días ya representados, no días nuevos.",
+    "test_size": 0.2,
+    "random_state": 42
+  },
+  "datos": {
+    "archivo": "flight_data_2024_sample.csv",
+    "fuente": "Kaggle — Flight Delay Dataset 2024 (https://www.kaggle.com/datasets/hrishitpatil/flight-data-2024)",
+    "sha256": "3474b0573b40c922e97ae270b7ec6a9ab296ebd8d87767696d9cb7a030856264",
+    "filas_leidas": 10000,
+    "filas_con_objetivo": 9836,
+    "n_train": 7868,
+    "n_test": 1968,
+    "dias": {
+      "n_dias_train": 366,
+      "n_dias_test": 362,
+      "dias_test_en_train": 362
+    },
+    "alcance": "Solo vuelos con llegada observada; cancelados y desviados se excluyen porque no tienen objetivo."
+  },
+  "faltantes_inducidos": {
+    "columna": "crs_elapsed_time",
+    "fraccion": 0.0,
+    "nota": "Las predictoras originales no tienen faltantes. Una fracción mayor que cero es una simulación sintética, no faltantes naturales. El equipo cuenta con autorización escrita para usar esta simulación documentada como alternativa al requisito."
+  },
+  "entorno": {
+    "python": "3.11.18",
+    "scikit_learn": "1.9.0",
+    "pandas": "3.0.5",
+    "numpy": "2.4.6",
+    "joblib": "1.6.0"
+  }
+}
+
+$ docker inspect -f "{{range .Config.Env}}{{println .}}{{end}}" api-retrasos | grep GIT_COMMIT
+GIT_COMMIT=f4570a4fb646a8c069fa93499d2691f02f44af07
